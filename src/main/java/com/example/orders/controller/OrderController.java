@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/orders") // Asegura que el prefijo coincida con React
+@RequestMapping("/api/orders")
 public class OrderController {
 
     private final OrderRepository orderRepository;
@@ -27,7 +27,7 @@ public class OrderController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('SCOPE_OT.Create')")
+    @PreAuthorize("hasAuthority('SCOPE_OT.Create') and hasAnyRole('Admin', 'Operator', 'Customer')")
     public ResponseEntity<String> createOrder(@RequestBody Order order) {
         if (order.getStatus() == null) {
             order.setStatus("CREADO");
@@ -47,8 +47,7 @@ public class OrderController {
     }
 
     @PutMapping("/{id}/status")
-    // Permitir temporalmente SCOPE_OT.Create para evitar el error 403
-    @PreAuthorize("hasAuthority('SCOPE_OT.Create') or hasAuthority('SCOPE_OT.Update')")
+    @PreAuthorize("(hasAuthority('SCOPE_OT.Create') or hasAuthority('SCOPE_OT.Update')) and hasAnyRole('Admin', 'Operator')")
     public ResponseEntity<?> updateOrderStatus(@PathVariable String id, @RequestParam String newStatus) {
         return orderRepository.findById(id).map(order -> {
             String currentStatus = order.getStatus();

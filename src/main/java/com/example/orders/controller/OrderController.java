@@ -10,10 +10,8 @@ import com.example.orders.publisher.AuditEventPublisher;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -22,7 +20,6 @@ public class OrderController {
     private final OrderRepository orderRepository;
     private final MessagingService messagingService;
     private final AuditEventPublisher auditEventPublisher;
-    private final RestTemplate restTemplate = new RestTemplate();
 
     public OrderController(
             OrderRepository orderRepository,
@@ -39,8 +36,12 @@ public class OrderController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('SCOPE_OT.Create') and hasAnyRole('Admin', 'Operator', 'Customer')")
-    public ResponseEntity<String> createOrder(@RequestBody Order order) {
+    @PreAuthorize(
+            "hasAuthority('SCOPE_OT.Create') and " +
+            "hasAnyRole('Admin', 'Operator', 'Customer')"
+    )
+    public ResponseEntity<String> createOrder(
+            @RequestBody Order order) {
 
         if (order.getStatus() == null) {
             order.setStatus("CREADO");
@@ -49,44 +50,23 @@ public class OrderController {
         // 1. Guardar el pedido en la base de datos.
         Order saved = orderRepository.save(order);
 
-        // 2. Publicar el evento de auditoría en RabbitMQ.
+        // 2. Publicar el evento de auditoría para report.
         auditEventPublisher.publishOrderCreated(saved);
 
-        // 3. Actualizar el stock de los productos en Catálogo.
+        // 3. Enviar los comandos de stock a catalog.
         if (saved.getItems() != null) {
             for (OrderItem item : saved.getItems()) {
-                try {
-                    String catalogUrl =
-                            "http://ms-catalog:8087/api/catalog/productos/"
-                                    + item.getProductId();
-
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> prod =
-                            restTemplate.getForObject(catalogUrl, Map.class);
-
-                    if (prod != null && prod.containsKey("stock")) {
-                        int stockActual =
-                                ((Number) prod.get("stock")).intValue();
-
-                        int nuevoStock =
-                                Math.max(0, stockActual - item.getQuantity());
-
-                        restTemplate.put(
-                                catalogUrl + "/stock?stock=" + nuevoStock,
-                                null
-                        );
-                    }
-                } catch (Exception e) {
-                    System.err.println(
-                            "No se pudo actualizar el stock en Catálogo: "
-                                    + e.getMessage()
-                    );
-                }
+                messagingService.publishStockUpdateCommand(
+                        item.getProductId(),
+                        item.getQuantity()
+                );
             }
         }
 
-        // 4. Conservar las publicaciones existentes.
+        // 4. Mantener la publicación del evento en Kafka.
         messagingService.publishKafkaEvent(saved);
+
+        // 5. Mantener la tarea de procesamiento en RabbitMQ.
         messagingService.sendRabbitTask(saved.getId());
 
         return ResponseEntity.ok(
@@ -95,14 +75,19 @@ public class OrderController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrderById(@PathVariable String id) {
+    public ResponseEntity<Order> getOrderById(
+            @PathVariable String id) {
         return orderRepository.findById(id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PutMapping("/{id}/status")
-    @PreAuthorize("(hasAuthority('SCOPE_OT.Create') or hasAuthority('SCOPE_OT.Update')) and hasAnyRole('Admin', 'Operator')")
+    @PreAuthorize(
+            "(hasAuthority('SCOPE_OT.Create') or " +
+            "hasAuthority('SCOPE_OT.Update')) and " +
+            "hasAnyRole('Admin', 'Operator')"
+    )
     public ResponseEntity<?> updateOrderStatus(
             @PathVariable String id,
             @RequestParam String newStatus) {
@@ -114,7 +99,8 @@ public class OrderController {
                     && !"ACEPTADO".equalsIgnoreCase(currentStatus)
                     && !"EN_PREPARACION".equalsIgnoreCase(currentStatus)) {
                 return ResponseEntity.badRequest().body(
-                        "Error: No se puede despachar un pedido que no ha sido ACEPTADO."
+                        "Error: No se puede despachar un pedido " +
+                        "que no ha sido ACEPTADO."
                 );
             }
 

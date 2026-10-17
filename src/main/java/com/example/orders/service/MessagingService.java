@@ -3,6 +3,7 @@ package com.example.orders.service;
 
 import com.example.orders.config.KafkaConfig;
 import com.example.orders.config.RabbitMqConfig;
+import com.example.orders.dto.StockUpdateCommand;
 import com.example.orders.model.Order;
 
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
@@ -45,19 +46,13 @@ public class MessagingService {
         );
     }
 
-    // Enviar un comando de actualización de stock al catálogo
-    public void publishStockUpdateCommand(
-            Object productId,
-            int quantity) {
-
-        Map<String, Object> command = new HashMap<>();
-        command.put("productId", productId);
-        command.put("quantity", quantity);
-
+    // NUEVO MÉTODO PARA ENVIAR EL COMANDO A CATÁLOGO
+    public void publishStockUpdateCommand(String productId, Integer quantityToDeduct) {
+        StockUpdateCommand command = new StockUpdateCommand(productId, quantityToDeduct);
         rabbitTemplate.convertAndSend(
-                RabbitMqConfig.EXCHANGE_CATALOG,
-                RabbitMqConfig.ROUTING_KEY_STOCK_CMD,
-                command
+            RabbitMqConfig.EXCHANGE_CATALOG,
+            RabbitMqConfig.ROUTING_KEY_STOCK_CMD,
+            command
         );
     }
 

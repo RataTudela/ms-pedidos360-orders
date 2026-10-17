@@ -17,6 +17,10 @@ public class RabbitMqConfig {
     public static final String EXCHANGE_CATALOG = "catalog.direct.exchange";
     public static final String ROUTING_KEY_STOCK_UPDATED = "catalog.stock.updated.key";
 
+    // Constantes para la Dead Letter Queue (DLQ) de Orders
+    public static final String ORDERS_DLX_EXCHANGE = "orders.dlx.exchange";
+    public static final String ORDERS_STOCK_UPDATED_DLQ = "orders.stock.updated.dlq";
+    public static final String ORDERS_DLK_KEY = "orders.dlk.key";
 
     @Bean
     public Queue orderQueue() {
@@ -41,7 +45,10 @@ public class RabbitMqConfig {
 
     @Bean
     public Queue stockUpdatedQueue() {
-        return QueueBuilder.durable(QUEUE_STOCK_UPDATED).build();
+        return QueueBuilder.durable(QUEUE_STOCK_UPDATED)
+                .withArgument("x-dead-letter-exchange", ORDERS_DLX_EXCHANGE)
+                .withArgument("x-dead-letter-routing-key", ORDERS_DLK_KEY)
+                .build();
     }
 
     @Bean
@@ -64,5 +71,22 @@ public class RabbitMqConfig {
     public Binding stockCmdBinding(@Qualifier("stockCmdQueue") Queue queue, 
                                    @Qualifier("catalogExchange") DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with("catalog.stock.cmd.key");
+    }
+
+    // 2. Definición del Dead Letter Exchange (DLX) y Dead Letter Queue (DLQ) para Orders
+    @Bean
+    public DirectExchange ordersDeadLetterExchange() {
+        return new DirectExchange(ORDERS_DLX_EXCHANGE);
+    }
+
+    @Bean
+    public Queue ordersStockUpdatedDlq() {
+        return QueueBuilder.durable(ORDERS_STOCK_UPDATED_DLQ).build();
+    }
+
+    @Bean
+    public Binding ordersDeadLetterBinding(@Qualifier("ordersStockUpdatedDlq") Queue queue,
+                                            @Qualifier("ordersDeadLetterExchange") DirectExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(ORDERS_DLK_KEY);
     }
 }

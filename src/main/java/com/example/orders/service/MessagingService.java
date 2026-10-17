@@ -2,6 +2,7 @@ package com.example.orders.service;
 
 import com.example.orders.config.KafkaConfig;
 import com.example.orders.config.RabbitMqConfig;
+import com.example.orders.dto.StockUpdateCommand;
 import com.example.orders.model.Order;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
@@ -26,6 +27,16 @@ public class MessagingService {
 
     public void sendRabbitTask(String orderId) {
         rabbitTemplate.convertAndSend(RabbitMqConfig.EXCHANGE_ORDERS, RabbitMqConfig.ROUTING_KEY_ORDERS, orderId);
+    }
+
+    // NUEVO MÉTODO PARA ENVIAR EL COMANDO A CATÁLOGO
+    public void publishStockUpdateCommand(String productId, Integer quantityToDeduct) {
+        StockUpdateCommand command = new StockUpdateCommand(productId, quantityToDeduct);
+        rabbitTemplate.convertAndSend(
+            RabbitMqConfig.EXCHANGE_CATALOG, 
+            "catalog.stock.cmd.key",         
+            command
+        );
     }
 
     @KafkaListener(topics = KafkaConfig.TOPIC_ORDER_EVENTS, groupId = "orders-group")

@@ -54,4 +54,15 @@ public class RabbitMqConfig {
                                         @Qualifier("catalogExchange") DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY_STOCK_UPDATED);
     }
+
+    @Bean
+    public Queue stockCmdQueue() {
+        return QueueBuilder.durable("catalog.stock.cmd.queue").build();
+    }
+
+    @Bean
+    public Binding stockCmdBinding(@Qualifier("stockCmdQueue") Queue queue, 
+                                   @Qualifier("catalogExchange") DirectExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with("catalog.stock.cmd.key");
+    }
 }

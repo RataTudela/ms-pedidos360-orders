@@ -54,4 +54,13 @@ public class RabbitMqConfig {
                                         @Qualifier("catalogExchange") DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY_STOCK_UPDATED);
     }
+    
+    @Bean
+    public TopicExchange auditTopicExchange() {
+        return new TopicExchange(
+                "pedidos360.events.topic",
+                true,
+                false
+        );
+    }
 }

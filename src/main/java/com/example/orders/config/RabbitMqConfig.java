@@ -17,7 +17,7 @@ public class RabbitMqConfig {
     public static final String EXCHANGE_CATALOG = "catalog.direct.exchange";
     public static final String ROUTING_KEY_STOCK_UPDATED = "catalog.stock.updated.key";
 
-    // Constante para MessagingService.java
+    // Requerido por MessagingService.java para enviar el comando a catalog
     public static final String ROUTING_KEY_STOCK_CMD = "catalog.stock.cmd.key";
 
     // Constantes para la Dead Letter Queue (DLQ) de Orders
@@ -65,17 +65,6 @@ public class RabbitMqConfig {
     public Binding stockUpdatedBinding(@Qualifier("stockUpdatedQueue") Queue queue, 
                                         @Qualifier("catalogExchange") DirectExchange exchange) {
         return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY_STOCK_UPDATED);
-    }
-
-    @Bean
-    public Queue stockCmdQueue() {
-        return QueueBuilder.durable("catalog.stock.cmd.queue").build();
-    }
-
-    @Bean
-    public Binding stockCmdBinding(@Qualifier("stockCmdQueue") Queue queue, 
-                                   @Qualifier("catalogExchange") DirectExchange exchange) {
-        return BindingBuilder.bind(queue).to(exchange).with(ROUTING_KEY_STOCK_CMD);
     }
 
     // Definición del DLX y DLQ para Orders

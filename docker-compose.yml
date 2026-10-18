@@ -8,8 +8,8 @@ services:
       - "8081:8081"
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      - SPRING_RABBITMQ_HOST=rabbitmq
-      - SPRING_RABBITMQ_PORT=5672
+      # Reemplazamos HOST y PORT por ADDRESSES apuntando a los 2 nodos
+      - SPRING_RABBITMQ_ADDRESSES=rabbitmq1:5672,rabbitmq2:5672
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
       # --- Configuración para DLQ y Reintentos ---
@@ -18,16 +18,40 @@ services:
       - SPRING_RABBITMQ_LISTENER_SIMPLE_DEFAULT_REQUEUE_REJECTED=false
     depends_on:
       - kafka
-      - rabbitmq
+      - rabbitmq1
+      - rabbitmq2
     networks:
       - red-compartida
 
-  rabbitmq:
+  # --- NODO 1 DE RABBITMQ ---
+  rabbitmq1:
     image: rabbitmq:3-management
-    container_name: rabbitmq
+    container_name: rabbitmq1
+    hostname: rabbitmq1
     ports:
       - "5672:5672"
       - "15672:15672"
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=TokenSecretoCluster123
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    networks:
+      - red-compartida
+
+  # --- NODO 2 DE RABBITMQ ---
+  rabbitmq2:
+    image: rabbitmq:3-management
+    container_name: rabbitmq2
+    hostname: rabbitmq2
+    ports:
+      - "5673:5672"   # Expuesto en 5673 para no chocar con el nodo 1
+      - "15673:15672" # Expuesto en 15673 para no chocar con el nodo 1
+    environment:
+      - RABBITMQ_ERLANG_COOKIE=TokenSecretoCluster123
+    volumes:
+      - ./rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf
+    depends_on:
+      - rabbitmq1
     networks:
       - red-compartida
 

@@ -8,11 +8,9 @@ services:
       - "8081:8081"
     environment:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
-      # Reemplazamos HOST y PORT por ADDRESSES apuntando a los 2 nodos
       - SPRING_RABBITMQ_ADDRESSES=rabbitmq1:5672,rabbitmq2:5672
       - SPRING_RABBITMQ_USERNAME=guest
       - SPRING_RABBITMQ_PASSWORD=guest
-      # --- Configuración para DLQ y Reintentos ---
       - SPRING_RABBITMQ_LISTENER_SIMPLE_RETRY_ENABLED=true
       - SPRING_RABBITMQ_LISTENER_SIMPLE_RETRY_MAX_ATTEMPTS=3
       - SPRING_RABBITMQ_LISTENER_SIMPLE_DEFAULT_REQUEUE_REJECTED=false
@@ -44,8 +42,8 @@ services:
     container_name: rabbitmq2
     hostname: rabbitmq2
     ports:
-      - "5673:5672"   # Expuesto en 5673 para no chocar con el nodo 1
-      - "15673:15672" # Expuesto en 15673 para no chocar con el nodo 1
+      - "5673:5672"   
+      - "15673:15672" 
     environment:
       - RABBITMQ_ERLANG_COOKIE=TokenSecretoCluster123
     volumes:

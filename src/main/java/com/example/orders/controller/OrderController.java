@@ -47,13 +47,10 @@ public class OrderController {
             order.setStatus("CREADO");
         }
 
-        // 1. Guardar el pedido en la base de datos.
         Order saved = orderRepository.save(order);
 
-        // 2. Publicar el evento de auditoría para report.
         auditEventPublisher.publishOrderCreated(saved);
 
-        // 3. Enviar los comandos de stock a catalog.
         if (saved.getItems() != null) {
             for (OrderItem item : saved.getItems()) {
                 messagingService.publishStockUpdateCommand(
@@ -63,10 +60,8 @@ public class OrderController {
             }
         }
 
-        // 4. Mantener la publicación del evento en Kafka.
         messagingService.publishKafkaEvent(saved);
 
-        // 5. Mantener la tarea de procesamiento en RabbitMQ.
         messagingService.sendRabbitTask(saved.getId());
 
         return ResponseEntity.ok(

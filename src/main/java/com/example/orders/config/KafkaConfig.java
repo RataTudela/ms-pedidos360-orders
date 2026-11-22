@@ -14,7 +14,7 @@ public class KafkaConfig {
     public NewTopic ordersTopic() {
         return TopicBuilder.name(TOPIC_ORDER_EVENTS)
                 .partitions(3)
-                .replicas(1)
+                .replicas(2)
                 .build();
     }
 }

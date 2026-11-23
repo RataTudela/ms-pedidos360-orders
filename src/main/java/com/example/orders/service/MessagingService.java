@@ -1,4 +1,3 @@
-
 package com.example.orders.service;
 
 import com.example.orders.config.KafkaConfig;
@@ -11,9 +10,6 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @Service
 public class MessagingService {
@@ -28,10 +24,15 @@ public class MessagingService {
         this.rabbitTemplate = rabbitTemplate;
     }
 
-    // Publicar eventos del pedido en Kafka
+    // Publicar eventos del pedido en ambos tópicos de Kafka
     public void publishKafkaEvent(Order order) {
         kafkaTemplate.send(
                 KafkaConfig.TOPIC_ORDER_EVENTS,
+                order.getId(),
+                order
+        );
+        kafkaTemplate.send(
+                KafkaConfig.TOPIC_ORDER_AUDIT,
                 order.getId(),
                 order
         );
